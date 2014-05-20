@@ -8,7 +8,6 @@ This is a common rbm tools solved by CD-1.
 
 from numpy import random, dot, sum, array, exp, zeros
 
-
 class RBM(object):
 
 	def __init__(self, num_visible, num_hidden):
