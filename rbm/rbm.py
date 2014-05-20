@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 """
-This is a common rbm tools solved by CD-k.
+This is a common rbm tools solved by CD-1.
 
 """
 
@@ -11,15 +11,13 @@ from numpy import random, dot, sum, array, exp, zeros
 
 class RBM(object):
 
-
 	def __init__(self, num_visible, num_hidden):
 		self.weights = random.randn(num_visible, num_hidden)
 		self.hidden_bias = random.randn(1, num_hidden)
 		self.visible_bias = random.randn(1, num_visible)
 
-
 	def train(self, visible_data, \
-		max_epochs = 50, batch = 10, \
+		max_epochs = 5000, batch = 10, \
 		initialmomentum = 0.5, finalmomentum = 0.9, \
 		weight_rate = 0.1, vbias_rate = 0.1, hbias_rate = 0.1, \
 		weightcost = 0.0002):
@@ -33,7 +31,7 @@ class RBM(object):
 				data = visible_data[start::batch]
 				pos_hidden_activations = dot(data, self.weights) + self.hidden_bias
 				pos_hidden_probs = self._sigmoid(pos_hidden_activations)
-				pos_hidden_states = pos_hidden_probs > random.randn(len(data), len(self.hidden_bias) + 1)
+				pos_hidden_states = pos_hidden_probs > random.randn(len(data), len(self.hidden_bias))
 				posprods = dot(data.T, pos_hidden_probs)
 				pos_hidden_act = sum(pos_hidden_probs)
 				pos_visible_act = sum(data)
@@ -58,8 +56,8 @@ class RBM(object):
 				self.weights += grad_weight
 				self.visible_bias += grad_vbias
 				self.hidden_bias += grad_hbias
-				print "epoch %d, error %d" % (epoch, error)
-
+			print "epoch %d, error %d\n" % (epoch, error)
+			error = 0.
 
 	def _sigmoid(self, x):
 		return 1.0 / (1 + exp(-x))
@@ -67,6 +65,8 @@ class RBM(object):
 
 if __name__ == '__main__':
 	r = RBM(num_visible = 6, num_hidden = 2)
-	training_data = array([[1,1,1,0,0,0],[1,0,1,0,0,0],[1,1,1,0,0,0],[0,0,1,1,1,0], [0,0,1,1,0,0],[0,0,1,1,1,0],[0,0,1,1,1,1]])
-	r.train(training_data, batch = 1)
+	training_data = array([[1,1,1,0,0,0],[1,0,1,0,0,0],[1,1,1,0,0,0],[0,0,1,1,1,0], [0,0,1,1,0,0],[0,0,1,1,1,0]])
+	r.train(training_data, batch = 2)
 	print(r.weights)
+	print(r.hidden_bias)
+	print(r.visible_bias)
