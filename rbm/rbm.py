@@ -6,7 +6,7 @@ This is a common rbm tools solved by CD-k.
 
 """
 
-from numpy import random, dot, sum
+from numpy import random, dot, sum, array, exp, zeros
 
 
 class RBM(object):
@@ -23,13 +23,13 @@ class RBM(object):
 		initialmomentum = 0.5, finalmomentum = 0.9, \
 		weight_rate = 0.1, vbias_rate = 0.1, hbias_rate = 0.1, \
 		weightcost = 0.0002):
-		grad_weight = zero(len(self.visible_bias), len(self.hidden_bias))
-		grad_hbias = zero(1, len(self.hidden_bias))
-		grad_vbias = zero(1, len(self.visible_bias))
+		grad_weight = zeros((len(self.visible_bias), len(self.hidden_bias)))
+		grad_hbias = zeros((1, len(self.hidden_bias)))
+		grad_vbias = zeros((1, len(self.visible_bias)))
 		error = 0
 		for epoch in xrange(max_epochs):
 			for start in xrange(batch):
-				print "epoch %d, batch %d" % (epoch, start)
+				print "epoch %d, batch %d" % (epoch, start + 1)
 				data = visible_data[start::batch]
 				pos_hidden_activations = dot(data, self.weights) + self.hidden_bias
 				pos_hidden_probs = self._sigmoid(pos_hidden_activations)
@@ -45,7 +45,7 @@ class RBM(object):
 				negprods = dot(neg_visible_probs.T, neg_hidden_probs)
 				neg_hidden_act = sum(neg_hidden_probs)
 				neg_visible_act = sum(neg_visible_probs)
-				error += sum(data - neg_visible_probs) ** 2)
+				error += sum((data - neg_visible_probs) ** 2)
 				
 				if epoch > 5:
 					momentum = finalmomentum
@@ -62,5 +62,11 @@ class RBM(object):
 
 
 	def _sigmoid(self, x):
-		return 1.0 / (1 + np.exp(-x))
+		return 1.0 / (1 + exp(-x))
 #endclass RBM
+
+if __name__ == '__main__':
+	r = RBM(num_visible = 6, num_hidden = 2)
+	training_data = array([[1,1,1,0,0,0],[1,0,1,0,0,0],[1,1,1,0,0,0],[0,0,1,1,1,0], [0,0,1,1,0,0],[0,0,1,1,1,0],[0,0,1,1,1,1]])
+	r.train(training_data, batch = 1)
+	print(r.weights)
