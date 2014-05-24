@@ -65,8 +65,20 @@ class RBM(object):
 			print "epoch %d, error %d\n" % (epoch, error)
 			error = 0.
 
-	def _sigmoid(self, x):
-		return 1.0 / (1 + exp(-x))
+	def _sigmoid(self, X):
+		sigmoid = lambda X : array([self._vec_sigmoid(x) for x in X], dtype = REAL) 
+		return sigmoid(X)
+
+	def _vec_sigmoid(self, X):
+		sigmoid = lambda X : array([self._oneelem_sigmoid(x) for x in X], dtype = REAL) 
+		return sigmoid(X)
+
+	def _oneelem_sigmoid(self, x):
+		if x >= 0:
+			return 1. / (1 + exp(-x))
+		else:
+			tmp = exp(x)
+			return tmp / (1 + tmp)
 #endclass RBM
 
 
