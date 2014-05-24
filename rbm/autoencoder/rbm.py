@@ -6,7 +6,7 @@ This is a common rbm tools solved by CD-1.
 
 """
 
-from numpy import random, dot, sum, array, exp, zeros, float32 as REAL
+from numpy import random, dot, sum, array, exp, zeros, float32 as REAL, concatenate
 
 class RBM(object):
 
@@ -25,11 +25,12 @@ class RBM(object):
 		grad_weight = zeros((len(self.visible_bias), len(self.hidden_bias)))
 		grad_hbias = zeros((1, len(self.hidden_bias)))
 		grad_vbias = zeros((1, len(self.visible_bias)))
-		error = 0
 		self.hidden_probs = []
 		for epoch in xrange(max_epochs):
+			error = 0.
 			for start in xrange(batch):
-				print "epoch %d, batch %d" % (epoch, start + 1)
+				if start % 10 == 0:
+					print "epoch %d, batch %d" % (epoch, start + 1)
 				data = visible_data[start::batch]
 				pos_hidden_activations = dot(data, self.weights) + self.hidden_bias
 				pos_hidden_probs = self._sigmoid(pos_hidden_activations)
@@ -53,7 +54,7 @@ class RBM(object):
 					momentum = initialmomentum
 				
 				if epoch == max_epochs - 1:
-					numpy.concatenate((self.hidden_probs, hidden_probs))
+					concatenate((self.hidden_probs, hidden_probs))
 
 				grad_weight = momentum * grad_weight + weight_rate * ((posprods - negprods) / len(data) - weightcost * self.weights)
 				grad_vbias = momentum * grad_vbias + vbias_rate * (pos_visible_act - neg_visible_act) / len(data)
@@ -63,7 +64,6 @@ class RBM(object):
 				self.visible_bias += grad_vbias
 				self.hidden_bias += grad_hbias
 			print "epoch %d, error %d\n" % (epoch, error)
-			error = 0.
 
 	def _sigmoid(self, X):
 		sigmoid = lambda X : array([self._vec_sigmoid(x) for x in X], dtype = REAL) 
