@@ -23,11 +23,11 @@ class Converter(object):
 
 
 	def __init__(self):
-		self.test_read('t10k-images.idx3-ubyte')
-		self.train_images = self.read_images('train-images.idx3-ubyte', 60)
-		self.test_images = self.read_images('t10k-images.idx3-ubyte', 10)
-		self.train_labels = self.read_labels('train-labels.idx1-ubyte', 60)
-		self.test_labels = self.read_labels('t10k-labels.idx1-ubyte', 10)
+		#self.test_read('t10k-images.idx3-ubyte')
+		self.train_images = self.read_images('train-images.idx3-ubyte')
+		self.test_images = self.read_images('t10k-images.idx3-ubyte')
+		self.train_labels = self.read_labels('train-labels.idx1-ubyte')
+		self.test_labels = self.read_labels('t10k-labels.idx1-ubyte')
 		self.total_train_data = len(self.train_labels)
 		self.dimensionality = 28 * 28
 
@@ -53,7 +53,7 @@ class Converter(object):
 		plt.show()
 
 
-	def read_images(self, filename, read_num):
+	def read_images(self, filename):
 		images = []
 
 		binfile = open(filename , 'rb')
@@ -63,7 +63,7 @@ class Converter(object):
 		magic, numImages, numRows, numColumns = struct.unpack_from('>IIII', buf, index) #read 4unsinged int32
 		index += struct.calcsize('>IIII')
 
-		for i in xrange(read_num):
+		for i in xrange(numImages):
 			im = struct.unpack_from('>%dB' % (28*28), buf, index) #read 784unsigned byte
 			index += struct.calcsize('>%dB' % (28*28))
 
@@ -73,7 +73,7 @@ class Converter(object):
 		return np.array(images)
 
 
-	def read_labels(self, filename, read_num):
+	def read_labels(self, filename):
 		labels = []
 
 		binfile = open(filename , 'rb')
@@ -83,7 +83,7 @@ class Converter(object):
 		magic, numLabels = struct.unpack_from('>II', buf, index) #read 2unsinged int32
 		index += struct.calcsize('>II')
 
-		for i in xrange(read_num):
+		for i in xrange(numLabels):
 			im = struct.unpack_from('>B' ,buf, index) #read 1 unsigned byte
 			index += struct.calcsize('>B')
 
