@@ -10,13 +10,16 @@ from numpy import random, dot, sum, array, exp, zeros
 
 class RBM(object):
 
+
 	def __init__(self, num_visible, num_hidden):
 		self.weights = random.randn(num_visible, num_hidden)
 		self.hidden_bias = random.randn(1, num_hidden)
 		self.visible_bias = random.randn(1, num_visible)
+		self.hidden_probs = array([])
+
 
 	def train(self, visible_data, \
-		max_epochs = 5000, batch = 10, \
+		max_epochs = 50, batch = 10, \
 		initialmomentum = 0.5, finalmomentum = 0.9, \
 		weight_rate = 0.1, vbias_rate = 0.1, hbias_rate = 0.1, \
 		weightcost = 0.0002):
@@ -24,6 +27,7 @@ class RBM(object):
 		grad_hbias = zeros((1, len(self.hidden_bias)))
 		grad_vbias = zeros((1, len(self.visible_bias)))
 		error = 0
+		self.hidden_probs = []
 		for epoch in xrange(max_epochs):
 			for start in xrange(batch):
 				print "epoch %d, batch %d" % (epoch, start + 1)
@@ -48,6 +52,10 @@ class RBM(object):
 					momentum = finalmomentum
 				else:
 					momentum = initialmomentum
+				
+				if epoch == max_epochs - 1:
+					numpy.concatenate((self.hidden_probs, hidden_probs))
+
 				grad_weight = momentum * grad_weight + weight_rate * ((posprods - negprods) / len(data) - weightcost * self.weights)
 				grad_vbias = momentum * grad_vbias + vbias_rate * (pos_visible_act - neg_visible_act) / len(data)
 				grad_hbias = momentum * grad_hbias + hbias_rate * (pos_hidden_act - neg_hidden_act) / len(data)
@@ -58,14 +66,20 @@ class RBM(object):
 			print "epoch %d, error %d\n" % (epoch, error)
 			error = 0.
 
+
 	def _sigmoid(self, x):
 		return 1.0 / (1 + exp(-x))
 #endclass RBM
+
+
+class RBMLinear(RBM):
+	pass
+#endclass RBMLinear
 
 if __name__ == '__main__':
 	r = RBM(num_visible = 6, num_hidden = 2)
 	training_data = array([[1,1,1,0,0,0],[1,0,1,0,0,0],[1,1,1,0,0,0],[0,0,1,1,1,0], [0,0,1,1,0,0],[0,0,1,1,1,0]])
 	r.train(training_data, batch = 2)
-	print(r.weights)
-	print(r.hidden_bias)
-	print(r.visible_bias)
+	print 'weights', r.weights
+	print 'hidden bias', r.hidden_bias
+	print 'visible bias', r.visible_bias
