@@ -6,10 +6,9 @@ This is a common rbm tools solved by CD-1.
 
 """
 
-from numpy import random, dot, sum, array, exp, zeros
+from numpy import random, dot, sum, array, exp, zeros, float32 as REAL
 
 class RBM(object):
-
 
 	def __init__(self, num_visible, num_hidden):
 		self.weights = random.randn(num_visible, num_hidden)
@@ -65,7 +64,6 @@ class RBM(object):
 				self.hidden_bias += grad_hbias
 			print "epoch %d, error %d\n" % (epoch, error)
 			error = 0.
-
 
 	def _sigmoid(self, x):
 		return 1.0 / (1 + exp(-x))
