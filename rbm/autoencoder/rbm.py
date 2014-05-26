@@ -25,7 +25,6 @@ class RBM(object):
 		grad_weight = zeros((len(self.visible_bias), len(self.hidden_bias)))
 		grad_hbias = zeros((1, len(self.hidden_bias)))
 		grad_vbias = zeros((1, len(self.visible_bias)))
-		self.hidden_probs = []
 		for epoch in xrange(max_epochs):
 			error = 0.
 			for start in xrange(batch):
@@ -54,7 +53,10 @@ class RBM(object):
 					momentum = initialmomentum
 				
 				if epoch == max_epochs - 1:
-					concatenate((self.hidden_probs, hidden_probs))
+					if len(self.hidden_probs) == 0:
+						self.hidden_probs = neg_hidden_probs
+					else:
+						self.hidden_probs = concatenate((self.hidden_probs, neg_hidden_probs))
 
 				grad_weight = momentum * grad_weight + weight_rate * ((posprods - negprods) / len(data) - weightcost * self.weights)
 				grad_vbias = momentum * grad_vbias + vbias_rate * (pos_visible_act - neg_visible_act) / len(data)
