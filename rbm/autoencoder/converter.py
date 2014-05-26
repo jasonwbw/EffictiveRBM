@@ -24,13 +24,17 @@ class Converter(object):
 
 	def __init__(self):
 		#self.test_read('t10k-images.idx3-ubyte')
-		self.train_images = self.read_images('train-images.idx3-ubyte')
-		self.test_images = self.read_images('t10k-images.idx3-ubyte')
+		train_images = self.read_images('train-images.idx3-ubyte')
+		test_images = self.read_images('t10k-images.idx3-ubyte')
 		self.train_labels = self.read_labels('train-labels.idx1-ubyte')
 		self.test_labels = self.read_labels('t10k-labels.idx1-ubyte')
+		self.train_images, self.test_images = self.simple_scale(train_images, test_images)
 		self.total_train_data = len(self.train_labels)
 		self.dimensionality = 28 * 28
 
+
+	def simple_scale(self, data0, data1):
+		return data0 / 255, data1 / 255
 
 	def test_read(self, filename):
 		images = []
@@ -60,7 +64,7 @@ class Converter(object):
 		buf = binfile.read()
 
 		index = 0
-		magic, numImages, numRows, numColumns = struct.unpack_from('>IIII', buf, index) #read 4unsinged int32
+		magic, numImages, numRows, numColumns = struct.unpack_from('>IIII', buf, index) #read 4 unsinged int32
 		index += struct.calcsize('>IIII')
 
 		for i in xrange(numImages):
@@ -94,4 +98,4 @@ class Converter(object):
 #endclass Converter
 
 if __name__ == '__main__':
-	Converter()
+	converter = Converter()
