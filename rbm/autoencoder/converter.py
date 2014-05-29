@@ -32,9 +32,8 @@ class Converter(object):
 		self.total_train_data = len(self.train_labels)
 		self.dimensionality = 28 * 28
 
-
 	def simple_scale(self, data0, data1):
-		return data0 / 255, data1 / 255
+		return data0 / 255., data1 / 255.
 
 	def test_read(self, filename):
 		images = []
@@ -56,7 +55,6 @@ class Converter(object):
 		plt.imshow(im , cmap='gray')
 		plt.show()
 
-
 	def read_images(self, filename):
 		images = []
 
@@ -75,7 +73,6 @@ class Converter(object):
 			images.append(im)
 
 		return np.array(images)
-
 
 	def read_labels(self, filename):
 		labels = []
