@@ -6,8 +6,9 @@ This is a common rbm tools solved by CD-1.
 
 """
 
-from numpy import random, dot, sum, array, exp, zeros, float32 as REAL, concatenate
 import time
+from numpy import random, dot, sum, array, exp, zeros, float32 as REAL, concatenate
+from scipy.special import expit
 
 class RBM(object):
 
@@ -37,19 +38,19 @@ class RBM(object):
 					pos_hidden_probs = pos_hidden_activations
 					pos_hidden_states = pos_hidden_probs + random.randn(len(data), len(self.hidden_bias))
 				else:
-					pos_hidden_probs = self._sigmoid(pos_hidden_activations)
+					pos_hidden_probs = expit(pos_hidden_activations)
 					pos_hidden_states = pos_hidden_probs > random.randn(len(data), len(self.hidden_bias))
 				posprods = dot(data.T, pos_hidden_probs)
 				pos_hidden_act = sum(pos_hidden_probs)
 				pos_visible_act = sum(data)
 
 				neg_visible_activations = dot(pos_hidden_states, self.weights.T) + self.visible_bias
-				neg_visible_probs = self._sigmoid(neg_visible_activations)
+				neg_visible_probs = expit(neg_visible_activations)
 				neg_hidden_activations = dot(neg_visible_probs, self.weights) + self.hidden_bias
 				if self.isLinear:
 					neg_hidden_probs = neg_hidden_activations
 				else:
-					neg_hidden_probs = self._sigmoid(neg_hidden_activations)
+					neg_hidden_probs = expit(neg_hidden_activations)
 				negprods = dot(neg_visible_probs.T, neg_hidden_probs)
 				neg_hidden_act = sum(neg_hidden_probs)
 				neg_visible_act = sum(neg_visible_probs)
@@ -74,21 +75,6 @@ class RBM(object):
 				self.visible_bias += grad_vbias
 				self.hidden_bias += grad_hbias
 			print "epoch %d, error %d\n" % (epoch, error)
-
-	def _sigmoid(self, X):
-		sigmoid = lambda X : array([self._vec_sigmoid(x) for x in X], dtype = REAL) 
-		return sigmoid(X)
-
-	def _vec_sigmoid(self, X):
-		sigmoid = lambda X : array([self._oneelem_sigmoid(x) for x in X], dtype = REAL) 
-		return sigmoid(X)
-
-	def _oneelem_sigmoid(self, x):
-		if x >= 0:
-			return 1. / (1 + exp(-x))
-		else:
-			tmp = exp(x)
-			return tmp / (1 + tmp)
 #endclass RBM
 
 if __name__ == '__main__':
