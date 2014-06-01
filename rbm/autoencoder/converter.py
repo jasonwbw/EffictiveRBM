@@ -21,7 +21,6 @@ import matplotlib.pyplot as plt
 
 class Converter(object):
 
-
 	def __init__(self):
 		#self.test_read('t10k-images.idx3-ubyte')
 		train_images = self.read_images('train-images.idx3-ubyte')
