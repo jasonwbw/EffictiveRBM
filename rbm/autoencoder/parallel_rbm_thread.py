@@ -16,6 +16,8 @@ try:
 except ImportError:
     from Queue import Queue
 
+# TODO: too many memory use for batch as contain a new data piece
+
 def one_batch(model, data, \
 	initialmomentum, finalmomentum, \
 	weight_rate, vbias_rate, hbias_rate, weightcost,\
