@@ -10,7 +10,7 @@ You cat set the maxinum number of epochs for pertraining each layer
 """
 
 from converter import Converter
-from parallel_rbm_thread import ParallelRBM
+from parallel_rbm_process import ParallelRBM
 
 import pickle
 
@@ -26,7 +26,7 @@ class MNISTDeepAuto(object):
 
 	def train(self):
 		print "train rbm level 1"
-		rbm = ParallelRBM(self.converter.dimensionality, 1000, 10)
+		rbm = ParallelRBM(self.converter.dimensionality, 1000, 5)
 		rbm.train(self.converter.train_images, max_epochs = 10, batch = 100)
 		hidden_probs1 = rbm.hidden_probs
 		self.pickle_dumps(rbm.weights, 'l1_w_p.pkl')
