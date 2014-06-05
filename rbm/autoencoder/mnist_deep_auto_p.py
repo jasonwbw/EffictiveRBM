@@ -10,14 +10,17 @@ You cat set the maxinum number of epochs for pertraining each layer
 """
 
 from converter import Converter
-from parallel_rbm_process import ParallelRBM
 
 import pickle
 
 class MNISTDeepAuto(object):
 
-	def __init__(self, batch_num = 100):
+	def __init__(self, mutiprocess = True, batch_num = 100):
 		self._load_data()
+		if mutiprocess:
+			from parallel_rbm_process import ParallelRBM
+		else:
+			from parallel_rbm_thread import ParallelRBM
 
 	def _load_data(self):
 		print "begin converting data into memory"
