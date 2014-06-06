@@ -17,20 +17,53 @@ def pickle_load(filename):
 	f.close()
 	return res
 
-def handle():
-	print 'load data'
+def load_weights():
 	we1 = pickle_load("l1_w.pkl")
 	we2 = pickle_load("l2_w.pkl")
 	we3 = pickle_load("l3_w.pkl")
 	we4 = pickle_load("l4_w.pkl")
+	return we1, we2, we3, we4
+
+def load_hidden_bias():
 	hb1 = pickle_load("l1_hb.pkl")
 	hb2 = pickle_load("l2_hb.pkl")
 	hb3 = pickle_load("l3_hb.pkl")
 	hb4 = pickle_load("l4_hb.pkl")
+	return hb1, hb2, hb3, hb4
+
+def load_visible_bias():
 	vb1 = pickle_load("l1_vb.pkl")
 	vb2 = pickle_load("l2_vb.pkl")
 	vb3 = pickle_load("l3_vb.pkl")
 	vb4 = pickle_load("l4_vb.pkl")
+	return vb1, vb2, vb3, vb4
+
+def compute_error(data, dimensionality, batch):
+	error = 0.
+	for start in xrange(batch): 
+		if start % 10 == 0:
+			print 'batch', start
+		data = insert(data[start::batch], dimensionality, 1, axis = 1) 
+		w1probs = insert(expit(dot(data, w1)), 1000, 1, axis = 1)
+		w2probs = insert(expit(dot(w1probs, w2)), 500, 1, axis = 1)
+		w3probs = insert(expit(dot(w2probs, w3)), 250, 1, axis = 1)
+		w4probs = insert(dot(w3probs, w4), 30, 1, axis = 1)
+		w5probs = insert(expit(dot(w4probs, w5)), 250, 1, axis = 1)
+		w6probs = insert(expit(dot(w5probs, w6)), 500, 1, axis = 1)
+		w7probs = insert(expit(dot(w6probs, w7)), 1000, 1, axis = 1)
+		dataout = expit(dot(w7probs, w8))
+		error += 1. / len(data) * sum((data[start::batch] - dataout)  ** 2)
+	return error / batch
+
+def handle():
+	print 'load data'
+	global we1, we2, we3, we4
+	global hb1, hb2, hb3, hb4
+	global vb1, vb2, vb3, vb4
+	we1, we2, we3, we4 = load_weights()
+	hb1, hb2, hb3, hb4 = load_hidden_bias()
+	vb1, vb2, vb3, vb4 = load_visible_bias()	
+	
 	print '\nrebuild data'
 	w1 = concatenate((we1, hb1), axis=0)
 	w2 = concatenate((we2, hb2), axis=0)
@@ -46,38 +79,12 @@ def handle():
 	batch = 100
 
 	print '\nstart train error compute'
-	train_error = 0.
-	for start in xrange(batch): 
-		if start % 10 == 0:
-			print 'batch', start
-		data = insert(converter.train_images[start::batch], converter.dimensionality, 1, axis = 1) 
-		w1probs = insert(expit(dot(data, w1)), 1000, 1, axis = 1)
-		w2probs = insert(expit(dot(w1probs, w2)), 500, 1, axis = 1)
-		w3probs = insert(expit(dot(w2probs, w3)), 250, 1, axis = 1)
-		w4probs = insert(dot(w3probs, w4), 30, 1, axis = 1)
-		w5probs = insert(expit(dot(w4probs, w5)), 250, 1, axis = 1)
-		w6probs = insert(expit(dot(w5probs, w6)), 500, 1, axis = 1)
-		w7probs = insert(expit(dot(w6probs, w7)), 1000, 1, axis = 1)
-		dataout = expit(dot(w7probs, w8))
-		train_error += 1. / len(converter.train_images) * sum((converter.train_images[start::batch] - dataout)  ** 2)
-	print train_error / batch
+	train_error = compute_error(converter.train_images, converter.dimensionality, batch)
+	print train_error
 
 	print '\nstart test error compute'
-	test_error = 0.
-	for start in xrange(batch): 
-		if start % 10 == 0:
-			print 'batch', start
-		data = insert(converter.test_images[start::batch], converter.dimensionality, 1, axis = 1) 
-		w1probs = insert(expit(dot(data, w1)), 1000, 1, axis = 1)
-		w2probs = insert(expit(dot(w1probs, w2)), 500, 1, axis = 1)
-		w3probs = insert(expit(dot(w2probs, w3)), 250, 1, axis = 1)
-		w4probs = insert(dot(w3probs, w4), 30, 1, axis = 1)
-		w5probs = insert(expit(dot(w4probs, w5)), 250, 1, axis = 1)
-		w6probs = insert(expit(dot(w5probs, w6)), 500, 1, axis = 1)
-		w7probs = insert(expit(dot(w6probs, w7)), 1000, 1, axis = 1)
-		dataout = expit(dot(w7probs, w8))
-		test_error += 1. / len(converter.test_images) * sum((converter.test_images[start::batch] - dataout)  ** 2)
-	print test_error / batch
+	test_error = compute_error(converter.test_images, converter.dimensionality, batch)
+	print test_error
 
 
 if __name__ == '__main__':
