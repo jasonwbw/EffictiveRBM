@@ -17,10 +17,7 @@ class MNISTDeepAuto(object):
 
 	def __init__(self, mutiprocess = True, batch_num = 100):
 		self._load_data()
-		if mutiprocess:
-			from parallel_rbm_process import ParallelRBM
-		else:
-			from parallel_rbm_thread import ParallelRBM
+		self.mutiprocess = mutiprocess
 
 	def _load_data(self):
 		print "begin converting data into memory"
@@ -28,6 +25,11 @@ class MNISTDeepAuto(object):
 		print "converting end\n"
 
 	def train(self):
+		if self.mutiprocess:
+			from parallel_rbm_process import ParallelRBM
+		else:
+			from parallel_rbm_thread import ParallelRBM
+
 		print "train rbm level 1"
 		rbm = ParallelRBM(self.converter.dimensionality, 1000, 5)
 		rbm.train(self.converter.train_images, max_epochs = 10, batch = 100)
