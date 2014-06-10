@@ -81,7 +81,7 @@ class ParallelRBM(object):
 				momentum = initialmomentum
 			self.error = 0.
 			pool = mp.Pool(self.workers)
-			rel = pool.imap(worker, [(visible_data[b::batch], self.weights, self.hidden_bias, self.visible_bias,\
+			rel = pool.imap_unordered(worker, [(visible_data[b::batch], self.weights, self.hidden_bias, self.visible_bias,\
 				weight_rate, vbias_rate, hbias_rate, weightcost, self.isLinear, b) for b in xrange(batch)])
 			for b in xrange(batch):
 				self.update(rel.next(), epoch, momentum)
