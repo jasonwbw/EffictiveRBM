@@ -69,6 +69,9 @@ class ParallelRBM(object):
 		initialmomentum = 0.5, finalmomentum = 0.9, \
 		weight_rate = 0.001, vbias_rate = 0.001, hbias_rate = 0.001, \
 		weightcost = 0.0002):
+		if batch < self.workers or batch % self.workers != 0:
+			print 'choose batch of multiple workers will be more efficient, current workers is', self.workers
+			return 
 		self.max_epochs = max_epochs
 		self.grad_weight = zeros((len(self.visible_bias), len(self.hidden_bias)))
 		self.grad_hbias = zeros((1, len(self.hidden_bias)))
@@ -80,11 +83,25 @@ class ParallelRBM(object):
 			else:
 				momentum = initialmomentum
 			self.error = 0.
+			#init wokers twice as self.workers, and add self.workers job after one batch self.workers end
 			pool = mp.Pool(self.workers)
-			rel = pool.imap_unordered(worker, [(visible_data[b::batch], self.weights, self.hidden_bias, self.visible_bias,\
-				weight_rate, vbias_rate, hbias_rate, weightcost, self.isLinear, b) for b in xrange(batch)])
-			for b in xrange(batch):
-				self.update(rel.next(), epoch, momentum)
+			rel1 = pool.imap_unordered(worker, [(visible_data[b::batch], self.weights, self.hidden_bias, self.visible_bias,\
+				weight_rate, vbias_rate, hbias_rate, weightcost, self.isLinear, b) for b in xrange(min(2 * self.workers, batch))])
+			for b in xrange(self.workers):
+				self.update(rel1.next(), epoch, momentum)
+			for turn in xrange(batch / self.workers - 1):
+				if turn != batch / self.workers - 2:
+					rel_tmp = pool.imap_unordered(worker, [(visible_data[b::batch], self.weights, self.hidden_bias, self.visible_bias,\
+						weight_rate, vbias_rate, hbias_rate, weightcost, self.isLinear, b) for b in xrange((turn + 2) * self.workers, (turn + 3) * self.workers)])
+					if turn % 2 == 0:
+						rel2 = rel_tmp
+					else:
+						rel1 = rel_tmp
+				for b in xrange(self.workers):
+					if turn % 2 == 0:
+						self.update(rel1.next(), epoch, momentum)
+					else:
+						self.update(rel2.next(), epoch, momentum)
 			print "epoch %d, error %d\n" % (epoch, self.error)
 
 	def update(self, (error, add_grad_weight, add_grad_vbias, add_grad_hbias, neg_hidden_probs), epoch, momentum):
