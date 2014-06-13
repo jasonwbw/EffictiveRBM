@@ -31,8 +31,8 @@ class MNISTDeepAuto(object):
 			from parallel_rbm_thread import ParallelRBM
 
 		print "train rbm level 1"
-		rbm = ParallelRBM(self.converter.dimensionality, 1000, 5)
-		rbm.train(self.converter.train_images, max_epochs = 10, batch = 100)
+		rbm = ParallelRBM(self.converter.dimensionality, 1000, 10)
+		rbm.train(self.converter.train_images, max_epochs = 20, batch = 100)
 		hidden_probs1 = rbm.hidden_probs
 		self.pickle_dumps(rbm.weights, 'l1_w_p.pkl')
 		self.pickle_dumps(rbm.hidden_bias, 'l1_hb_p.pkl')
@@ -43,7 +43,7 @@ class MNISTDeepAuto(object):
 		
 		print "train rbm level 2"
 		rbm_l2 = ParallelRBM(1000, 500, 10)
-		rbm_l2.train(hidden_probs1, max_epochs = 10, batch = 100)
+		rbm_l2.train(hidden_probs1, max_epochs = 20, batch = 100)
 		hidden_probs2 = rbm_l2.hidden_probs
 		self.pickle_dumps(rbm_l2.weights, 'l2_w_p.pkl')
 		self.pickle_dumps(rbm_l2.hidden_bias, 'l2_hb_p.pkl')
@@ -54,7 +54,7 @@ class MNISTDeepAuto(object):
 
 		print "train rbm level 3"
 		rbm_l3 = ParallelRBM(500, 250, 10)
-		rbm_l3.train(hidden_probs2, max_epochs = 10, batch = 100)
+		rbm_l3.train(hidden_probs2, max_epochs = 20, batch = 100)
 		hidden_probs3 = rbm_l3.hidden_probs
 		self.pickle_dumps(rbm_l3.weights, 'l3_w_p.pkl')
 		self.pickle_dumps(rbm_l3.hidden_bias, 'l3_hb_p.pkl')
@@ -65,7 +65,7 @@ class MNISTDeepAuto(object):
 
 		print "train rbm level 4"
 		rbm_l4 = ParallelRBM(250, 30, 10, isLinear = True)
-		rbm_l4.train(hidden_probs3, max_epochs = 10, batch = 100)
+		rbm_l4.train(hidden_probs3, max_epochs = 20, batch = 100)
 		hidden_top = rbm_l4.hidden_probs
 		self.pickle_dumps(rbm_l4.weights, 'l4_w_p.pkl')
 		self.pickle_dumps(rbm_l4.hidden_bias, 'l4_hb_p.pkl')
