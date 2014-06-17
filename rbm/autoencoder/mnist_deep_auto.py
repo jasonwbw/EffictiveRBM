@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 #
-# Author : @Jason_wbw
+# Author : Jasonwbw@yahoo.com
 
 """
 This program pertrains a deep autoencoder for MNIST dataset

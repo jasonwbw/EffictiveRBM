@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 #
-# Author : @Jason_wbw
+# Author : Jasonwbw@yahoo.com
 
 """
 Converter MNIST data to np.array

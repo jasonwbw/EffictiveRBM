@@ -60,16 +60,16 @@ def worker((data,\
 	neg_hidden_act = sum(neg_hidden_probs)
 	neg_visible_act = sum(neg_visible_probs)
 
-	add__grad_weight = weight_rate * ((posprods - negprods) / len(data) - weightcost * weights)
-	add__grad_vbias = vbias_rate * (pos_visible_act - neg_visible_act) / len(data)
-	add__grad_hbias = hbias_rate * (pos_hidden_act - neg_hidden_act) / len(data)
+	add_grad_weight = weight_rate * ((posprods - negprods) / len(data) - weightcost * weights)
+	add_grad_vbias = vbias_rate * (pos_visible_act - neg_visible_act) / len(data)
+	add_grad_hbias = hbias_rate * (pos_hidden_act - neg_hidden_act) / len(data)
 
 	error = sum((data - neg_visible_probs) ** 2)
 
 	if batch_num % 10 == 0:
 		print 'finish batch compute', batch_num, time.asctime( time.localtime(time.time()) )
 
-	return (error, add__grad_weight, add__grad_vbias, add__grad_hbias, neg_hidden_probs)
+	return (error, add_grad_weight, add_grad_vbias, add_grad_hbias, neg_hidden_probs)
 
 class ParallelRBM(object):
 

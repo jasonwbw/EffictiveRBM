@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
+#
+# Author : Jasonwbw@yahoo.com
 
 """
 This is a common rbm tools solved by CD-1.
