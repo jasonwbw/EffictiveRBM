@@ -11,14 +11,14 @@ class BatchIterator(object):
 
 	def __init__(self, batch):
 		self.batch = batch
+		self.current_batch = -1
 
 	@abstractmethod
 	def next_batch(self):
 		pass
 
-	@abstractmethod
 	def back2start(self):
-		pass
+		self.current_batch = -1
 
 	def next(self):
 		next_batch = self.next_batch()
@@ -35,16 +35,12 @@ class DefaultBatchIterator(BatchIterator):
 	def __init__(self, batch, data):
 		BatchIterator.__init__(self, batch)
 		self.data = data
-		self.current_batch = -1
 
 	def next_batch(self):
 		if self.current_batch >= self.batch - 1:
 			return None
 		self.current_batch += 1
 		return self.data[self.current_batch : : self.batch]
-
-	def back2start(self):
-		self.current_batch = -1
 #endclass DefaultBatchIterator
 
 if __name__ == '__main__':
