@@ -179,7 +179,7 @@ class ParallelRBM(object):
 		self.error += error
 		
 		if epoch == self.max_epochs - 1:
-			if len(self.hidden_probs) == 0:
+			if self.hidden_probs == None or len(self.hidden_probs) == 0:
 				self.hidden_probs = neg_hidden_probs
 			else:
 				concatenate((self.hidden_probs, neg_hidden_probs), axis=0)
