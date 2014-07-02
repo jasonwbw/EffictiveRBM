@@ -59,8 +59,8 @@ except ImportError:
 			pos_hidden_probs = expit(pos_hidden_activations)
 			pos_hidden_states = pos_hidden_probs > random.randn(len(data), len(hidden_bias)).astype(REAL)
 		posprods = dot(data.T, pos_hidden_probs)
-		pos_hidden_act = sum(pos_hidden_probs)
-		pos_visible_act = sum(data)
+		pos_hidden_act = sum(pos_hidden_probs, axis = 0)
+		pos_visible_act = sum(data, axis = 0)
 		neg_visible_activations = dot(pos_hidden_states, weights.T) + visible_bias
 		neg_visible_probs = expit(neg_visible_activations)
 		neg_hidden_activations = dot(neg_visible_probs, weights) + hidden_bias
@@ -69,8 +69,8 @@ except ImportError:
 		else:
 			neg_hidden_probs = expit(neg_hidden_activations)
 		negprods = dot(neg_visible_probs.T, neg_hidden_probs)
-		neg_hidden_act = sum(neg_hidden_probs)
-		neg_visible_act = sum(neg_visible_probs)
+		neg_hidden_act = sum(neg_hidden_probs, axis = 0)
+		neg_visible_act = sum(neg_visible_probs, axis = 0)
 		add_grad_weight = weight_rate * ((posprods - negprods) / len(data) - weightcost * weights)
 		add_grad_vbias = vbias_rate * (pos_visible_act - neg_visible_act) / len(data)
 		add_grad_hbias = hbias_rate * (pos_hidden_act - neg_hidden_act) / len(data)
