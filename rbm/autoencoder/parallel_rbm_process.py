@@ -14,62 +14,70 @@ References :
 import time
 import multiprocessing as mp
 from copy import deepcopy
-from numpy import random, dot, sum, array, exp, zeros, float32 as REAL, concatenate
+from numpy import random, dot, sum, array, exp, zeros, concatenate, float32 as REAL
 from scipy.special import expit
 
-def worker((data,\
-	weights, hidden_bias, visible_bias,\
-	weight_rate, vbias_rate, hbias_rate, weightcost, isLinear, batch_num)):
-	'''
-	One process's job that compute the added gradient
+try:
+	import pyximport
+	import numpy as np
+	pyximport.install(setup_args={"include_dirs":np.get_include()},
+		reload_support=True)
+	from worker_inner import fast_worker as cworker
+	def worker((data,\
+		weights, hidden_bias, visible_bias,\
+		weight_rate, vbias_rate, hbias_rate, weightcost, isLinear, batch_num)):
+		return cworker(data,\
+			weights, hidden_bias, visible_bias,\
+			weight_rate, vbias_rate, hbias_rate, weightcost, isLinear, batch_num)
+except ImportError:
+	def worker((data,\
+		weights, hidden_bias, visible_bias,\
+		weight_rate, vbias_rate, hbias_rate, weightcost, isLinear, batch_num)):
+		'''
+		One process's job that compute the added gradient
 
-	Args:
-	    data : data for this batch
-        weights : weights in rbm model
-        hidden_bias : hidden bias in rbm model
-        visible_bias : visible bias in rbm model
-        weight_rate : learning for weight
-        vbias_rate : learning for visible bias
-        hbias_rate : learning for hidden bias
-        weightcost : weight cost in rbm model
-        isLinear : is linear rbm model or not
-        batch_num : number for this batch
+		Args:
+		    data : data for this batch
+            weights : weights in rbm model
+            hidden_bias : hidden bias in rbm model
+            visible_bias : visible bias in rbm model
+            weight_rate : learning for weight
+            vbias_rate : learning for visible bias
+            hbias_rate : learning for hidden bias
+            weightcost : weight cost in rbm model
+            isLinear : is linear rbm model or not
+            batch_num : number for this batch
 
-    Returns:
-        tuple of error, added gradient for weight, added gradient for visible bias, added gradient for hidden bias
-	'''
-	pos_hidden_activations = dot(data, weights) + hidden_bias
-	if isLinear:
-		pos_hidden_probs = pos_hidden_activations
-		pos_hidden_states = pos_hidden_probs + random.randn(len(data), len(hidden_bias)) 
-	else:
-		pos_hidden_probs = expit(pos_hidden_activations)
-		pos_hidden_states = pos_hidden_probs > random.randn(len(data), len(hidden_bias))
-	posprods = dot(data.T, pos_hidden_probs)
-	pos_hidden_act = sum(pos_hidden_probs)
-	pos_visible_act = sum(data)
-
-	neg_visible_activations = dot(pos_hidden_states, weights.T) + visible_bias
-	neg_visible_probs = expit(neg_visible_activations)
-	neg_hidden_activations = dot(neg_visible_probs, weights) + hidden_bias
-	if isLinear:
-		neg_hidden_probs = neg_hidden_activations
-	else:
-		neg_hidden_probs = expit(neg_hidden_activations)
-	negprods = dot(neg_visible_probs.T, neg_hidden_probs)
-	neg_hidden_act = sum(neg_hidden_probs)
-	neg_visible_act = sum(neg_visible_probs)
-
-	add_grad_weight = weight_rate * ((posprods - negprods) / len(data) - weightcost * weights)
-	add_grad_vbias = vbias_rate * (pos_visible_act - neg_visible_act) / len(data)
-	add_grad_hbias = hbias_rate * (pos_hidden_act - neg_hidden_act) / len(data)
-
-	error = sum((data - neg_visible_probs) ** 2)
-
-	if batch_num % 10 == 0:
-		print 'finish batch compute', batch_num, time.asctime( time.localtime(time.time()) )
-
-	return (error, add_grad_weight, add_grad_vbias, add_grad_hbias, neg_hidden_probs)
+        Returns:
+            tuple of error, added gradient for weight, added gradient for visible bias, added gradient for hidden bias
+        '''
+		pos_hidden_activations = dot(data, weights) + hidden_bias
+		if isLinear:
+			pos_hidden_probs = pos_hidden_activations
+			pos_hidden_states = pos_hidden_probs + random.randn(len(data), len(hidden_bias)).astype(REAL)
+		else:
+			pos_hidden_probs = expit(pos_hidden_activations)
+			pos_hidden_states = pos_hidden_probs > random.randn(len(data), len(hidden_bias)).astype(REAL)
+		posprods = dot(data.T, pos_hidden_probs)
+		pos_hidden_act = sum(pos_hidden_probs, axis = 0)
+		pos_visible_act = sum(data, axis = 0)
+		neg_visible_activations = dot(pos_hidden_states, weights.T) + visible_bias
+		neg_visible_probs = expit(neg_visible_activations)
+		neg_hidden_activations = dot(neg_visible_probs, weights) + hidden_bias
+		if isLinear:
+			neg_hidden_probs = neg_hidden_activations
+		else:
+			neg_hidden_probs = expit(neg_hidden_activations)
+		negprods = dot(neg_visible_probs.T, neg_hidden_probs)
+		neg_hidden_act = sum(neg_hidden_probs, axis = 0)
+		neg_visible_act = sum(neg_visible_probs, axis = 0)
+		add_grad_weight = weight_rate * ((posprods - negprods) / len(data) - weightcost * weights)
+		add_grad_vbias = vbias_rate * (pos_visible_act - neg_visible_act) / len(data)
+		add_grad_hbias = hbias_rate * (pos_hidden_act - neg_hidden_act) / len(data)
+		error = sum((data - neg_visible_probs) ** 2)
+		if batch_num % 10 == 0:
+			print 'finish batch compute', batch_num, time.asctime(time.localtime(time.time()))
+		return (error, add_grad_weight, add_grad_vbias, add_grad_hbias, neg_hidden_probs)
 
 class ParallelRBM(object):
 
@@ -98,13 +106,13 @@ class ParallelRBM(object):
 		    workers : number of process to use
 		    isLinear : is linear rbm or not
 		'''
-		self.weights = random.randn(num_visible, num_hidden)
-		self.hidden_bias = random.randn(1, num_hidden)
-		self.visible_bias = random.randn(1, num_visible)
+		self.weights = random.randn(num_visible, num_hidden).astype(REAL)
+		self.hidden_bias = random.randn(1, num_hidden).astype(REAL)
+		self.visible_bias = random.randn(1, num_visible).astype(REAL)
 
-		self._grad_weight = zeros((len(self.visible_bias), len(self.hidden_bias)))
-		self._grad_hbias = zeros((1, len(self.hidden_bias)))
-		self._grad_vbias = zeros((1, len(self.visible_bias)))
+		self._grad_weight = zeros((len(self.visible_bias), len(self.hidden_bias)), dtype=REAL)
+		self._grad_hbias = zeros((1, len(self.hidden_bias)), dtype=REAL)
+		self._grad_vbias = zeros((1, len(self.visible_bias)), dtype=REAL)
 
 		self.hidden_probs = None
 		self.workers = workers
@@ -133,9 +141,9 @@ class ParallelRBM(object):
 			print 'choose batch of multiple workers will be more efficient, current workers is', self.workers
 			return 
 		self.max_epochs = max_epochs
-		self._grad_weight = zeros((len(self.visible_bias), len(self.hidden_bias)))
-		self._grad_hbias = zeros((1, len(self.hidden_bias)))
-		self._grad_vbias = zeros((1, len(self.visible_bias)))
+		self._grad_weight = zeros((len(self.visible_bias), len(self.hidden_bias)), dtype=REAL)
+		self._grad_hbias = zeros((1, len(self.hidden_bias)), dtype=REAL)
+		self._grad_vbias = zeros((1, len(self.visible_bias)), dtype=REAL)
 		for epoch in xrange(max_epochs):
 			print "epoch %d" % (epoch)
 			if epoch > 5:
