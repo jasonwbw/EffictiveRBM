@@ -22,7 +22,7 @@ try:
 	import numpy as np
 	pyximport.install(setup_args={"include_dirs":np.get_include()},
 		reload_support=True)
-	from worker_inner import cworker
+	from worker_inner import fast_worker as cworker
 	def worker((data,\
 		weights, hidden_bias, visible_bias,\
 		weight_rate, vbias_rate, hbias_rate, weightcost, isLinear, batch_num)):
@@ -30,6 +30,7 @@ try:
 			weights, hidden_bias, visible_bias,\
 			weight_rate, vbias_rate, hbias_rate, weightcost, isLinear, batch_num)
 except ImportError:
+	raise ImportError
 	def worker((data,\
 		weights, hidden_bias, visible_bias,\
 		weight_rate, vbias_rate, hbias_rate, weightcost, isLinear, batch_num)):
