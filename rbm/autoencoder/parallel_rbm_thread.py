@@ -33,7 +33,6 @@ try:
 			model.weights, model.hidden_bias, model.visible_bias,
 			model.weight_rate, model.vbias_rate, model.hbias_rate, model.weightcost, model.isLinear, batch_num)
 except ImportError:
-	raise ImportError
 	def worker((data,\
 		weights, hidden_bias, visible_bias,\
 		weight_rate, vbias_rate, hbias_rate, weightcost, isLinear, batch_num)):
