@@ -273,19 +273,19 @@ cdef _cworker(np.ndarray[REAL_t, ndim=2] data, \
         np.ndarray[REAL_t, ndim=2] neg_visible_probs
         np.ndarray[REAL_t, ndim=2] neg_hidden_activations
         np.ndarray[REAL_t, ndim=2] negprods
-    pos_hidden_activations = _add(_dot(data, weights), hidden_bias)
+    pos_hidden_activations = fast_add(_dot(data, weights), hidden_bias)
     pos_hidden_probs = (isLinear == 1 and pos_hidden_activations or sigmoid_2(pos_hidden_activations))
     pos_hidden_states = _add_random(pos_hidden_probs, isLinear)
     posprods = _dot(data.T, pos_hidden_probs)
 
-    neg_visible_probs = sigmoid_2(_add(fast_dot(pos_hidden_states, weights.T), visible_bias))
-    neg_hidden_activations = _add(fast_dot(neg_visible_probs, weights), hidden_bias)
+    neg_visible_probs = sigmoid_2(fast_add(fast_dot(pos_hidden_states, weights.T), visible_bias))
+    neg_hidden_activations = fast_add(fast_dot(neg_visible_probs, weights), hidden_bias)
     neg_hidden_probs = (isLinear == 1 and neg_hidden_activations or sigmoid_2(neg_hidden_activations))
     negprods = _dot(neg_visible_probs.T, neg_hidden_probs)
 
-    add_grad_weight = weight_rate * ((posprods - negprods) / len(data) - weightcost * weights)
-    add_grad_vbias = vbias_rate * (_sum(data) - _sum(neg_visible_probs)) / len(data)
-    add_grad_hbias = hbias_rate * (_sum(pos_hidden_probs) - _sum(neg_hidden_probs)) / len(data)
+    add_grad_weight = weight_rate * (_matrix_multi(posprods - negprods, len(data), 1) - _matrix_multi(weights, weightcost, 1))
+    add_grad_vbias = _matrix_multi(_sum(data) - _sum(neg_visible_probs), vbias_rate / len(data), 1) 
+    add_grad_hbias = _matrix_multi(_sum(pos_hidden_probs) - _sum(neg_hidden_probs), hbias_rate / len(data), 1)
 
     error = _square_error(data, neg_visible_probs)
 

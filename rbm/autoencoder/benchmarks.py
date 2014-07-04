@@ -18,6 +18,7 @@ B = np.array([[-3.0,  0.5],
               [ 2.0,  1.5], 
               [ 4.0, -4.0]], dtype=worker_inner.REAL)
 a2 = np.asarray(np.random.randn(1, 3), dtype=worker_inner.REAL)
+a3 = np.asarray(np.random.randn(1, 2), dtype=worker_inner.REAL)
 
 loops = 1000
 
@@ -131,6 +132,53 @@ def benchmark_matrix_plus():
     t2 = t.timeit(number=loops)
     print 'matrix_plus_1 is %f times faster than matrix_plus_2' % (t1 / t2)
     assert np.linalg.norm(matrix_plus_1()-matrix_plus_2()) == 0
+
+def worker_1():
+    return worker_inner.fast_worker(A, B, a2, a3, 0.5, 0.5, 0.5, 0.5, False, 1)
+
+from numpy import random, dot, sum, array, exp, zeros, concatenate, float32 as REAL
+from scipy.special import expit
+
+def worker(data,\
+    weights, hidden_bias, visible_bias,\
+    weight_rate, vbias_rate, hbias_rate, weightcost, isLinear, batch_num):
+    pos_hidden_activations = dot(data, weights) + hidden_bias
+    if isLinear:
+        pos_hidden_probs = pos_hidden_activations
+        pos_hidden_states = pos_hidden_probs + random.randn(len(data), len(hidden_bias)).astype(REAL)
+    else:
+        pos_hidden_probs = expit(pos_hidden_activations)
+        pos_hidden_states = pos_hidden_probs > random.randn(len(data), len(hidden_bias)).astype(REAL)
+    posprods = dot(data.T, pos_hidden_probs)
+    pos_hidden_act = sum(pos_hidden_probs, axis = 0)
+    pos_visible_act = sum(data, axis = 0)
+    neg_visible_activations = dot(pos_hidden_states, weights.T) + visible_bias
+    neg_visible_probs = expit(neg_visible_activations)
+    neg_hidden_activations = dot(neg_visible_probs, weights) + hidden_bias
+    if isLinear:
+        neg_hidden_probs = neg_hidden_activations
+    else:
+        neg_hidden_probs = expit(neg_hidden_activations)
+    negprods = dot(neg_visible_probs.T, neg_hidden_probs)
+    neg_hidden_act = sum(neg_hidden_probs, axis = 0)
+    neg_visible_act = sum(neg_visible_probs, axis = 0)
+    add_grad_weight = weight_rate * ((posprods - negprods) / len(data) - weightcost * weights)
+    add_grad_vbias = vbias_rate * (pos_visible_act - neg_visible_act) / len(data)
+    add_grad_hbias = hbias_rate * (pos_hidden_act - neg_hidden_act) / len(data)
+    error = sum((data - neg_visible_probs) ** 2)
+    if batch_num % 10 == 0:
+        print 'finish batch compute', batch_num, time.asctime(time.localtime(time.time()))
+    return (error, add_grad_weight, add_grad_vbias, add_grad_hbias, neg_hidden_probs)
+
+def worker_2():
+    return worker(A, B, a3, a2, 0.5, 0.5, 0.5, 0.5, False, 1)
+
+def benchmark_worker():
+    t = timeit.Timer("worker_2()", "from __main__ import worker_2")
+    t1 = t.timeit(number=loops)
+    t = timeit.Timer("worker_1()", "from __main__ import worker_1")
+    t2 = t.timeit(number=loops)
+    print 'worker_1 is %f times faster than worker_2' % (t1 / t2)
 
 if __name__ == '__main__':
     import benchmarks as b
