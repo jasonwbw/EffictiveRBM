@@ -1,0 +1,71 @@
+import numpy as np
+import pyximport
+
+pyximport.install(setup_args={"include_dirs":np.get_include()},
+                  reload_support=True)
+
+import timeit
+import time
+
+import worker_inner
+from scipy.special import expit
+
+a = np.asarray(np.random.rand(50), dtype=worker_inner.REAL)
+
+A = np.array([[2.0, 0.25, -1.0], 
+              [3.0, 0.0 ,  5.0]], dtype=worker_inner.REAL)
+B = np.array([[-3.0,  0.5], 
+              [ 2.0,  1.5], 
+              [ 4.0, -4.0]], dtype=worker_inner.REAL)
+a2 = np.asarray(np.random.randn(1, 3), dtype=worker_inner.REAL)
+
+loops = 1000
+
+def sigmoid_1():
+    return worker_inner.sigmoid_2(a)
+
+def sigmoid_2():
+    return worker_inner.sigmoid_3(a)
+
+def benchmark_sigmoid():
+    t = timeit.Timer("sigmoid_2()", "from __main__ import sigmoid_2")
+    t1 = t.timeit(number=loops)
+    t = timeit.Timer("sigmoid_1()", "from __main__ import sigmoid_1")
+    t2 = t.timeit(number=loops)
+    print 'sigmoid_1 is %f times faster than sigmoid_2' % (t1 / t2)
+    assert (np.linalg.norm(sigmoid_1() - sigmoid_2())) == 0
+
+def dot_1():
+    return worker_inner.fast_dot(A, B)
+
+def dot_2():
+    return np.dot(A, B)
+
+def benchmark_dot():
+    t = timeit.Timer("dot_2()", "from __main__ import dot_2")
+    t1 = t.timeit(number=loops)
+    t = timeit.Timer("dot_1()", "from __main__ import dot_1")
+    t2 = t.timeit(number=loops)
+    print 'dot_1 is %f times faster than dot_2' % (t1 / t2)
+    assert np.linalg.norm(dot_1()-dot_2()) == 0
+
+def add_1():
+    return worker_inner.add2(A, a2)
+
+def add_2():
+    return A + a2
+
+def benchmark_add():
+    t = timeit.Timer("add_2()", "from __main__ import add_2")
+    t1 = t.timeit(number=loops)
+    t = timeit.Timer("add_1()", "from __main__ import add_1")
+    t2 = t.timeit(number=loops)
+    print 'add_1 is %f times faster than add_2' % (t1 / t2)
+    assert np.linalg.norm(add_1()-add_2()) == 0
+
+
+if __name__ == '__main__':
+    import benchmarks as b
+    for func_name, func in  b.__dict__.items():
+        if func_name.startswith('benchmark_'):
+            func()
