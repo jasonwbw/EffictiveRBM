@@ -9,6 +9,7 @@ cimport numpy as np
 
 from libc.math cimport exp
 from libc.stdlib cimport rand, RAND_MAX
+from scipy.special import expit
 
 REAL = np.float32
 ctypedef np.float32_t REAL_t
@@ -41,7 +42,7 @@ cdef np.ndarray[REAL_t, ndim=2] _sigmoid2(np.ndarray[REAL_t, ndim=2] A):
             C[i, j] = _inner_sigmoid(A[i, j])
     return C
 
-def sigmoid(X, out=None):
+def sigmoid_1(X, out=None):
     is_1d = X.ndim == 1
     X = np.asarray(np.atleast_2d(X), dtype = REAL)
 
@@ -56,7 +57,14 @@ def sigmoid(X, out=None):
         return np.squeeze(out)
     return out
 
-fast_sigmoid = sigmoid
+def sigmoid_2(v):
+    return expit(v)
+
+def sigmoid_3(np.ndarray v):
+    cdef np.ndarray e = np.exp(-v)
+    return np.clip(1 / (1 + e), 0.00000001, 0.99999999)
+
+fast_sigmoid = sigmoid_2
 #end sigmoid
 
 cdef np.ndarray[REAL_t, ndim=2] _dot(np.ndarray[REAL_t, ndim=2] A, np.ndarray[REAL_t, ndim=2] B):
@@ -85,7 +93,7 @@ def dot(A, B):
     B = np.asarray(np.atleast_2d(B), dtype = REAL)
     return _dot(A, B)
 
-fast_dot = dot
+fast_dot = np.dot
 #end dot
 
 cdef np.ndarray[REAL_t, ndim=2] _add(np.ndarray[REAL_t, ndim=2] A, np.ndarray[REAL_t, ndim=2] added):
@@ -105,8 +113,21 @@ cdef np.ndarray[REAL_t, ndim=2] _add(np.ndarray[REAL_t, ndim=2] A, np.ndarray[RE
             C[i, j] = A[i, j] + added[0, j]
     return C
 
-def add(A, B):
+cdef _add2(REAL_t *C, REAL_t *A, REAL_t *added, const unsigned int n, const unsigned int m):
+    cdef unsigned int i, j, index = 0
+    for i in range(n):
+        for j in range(m):
+            C[i * m + j] = A[i * m + j] + added[j]
+
+def add1(A, B):
     return _add(A, B)
+
+def add2(np.ndarray[REAL_t, ndim=2] A, np.ndarray[REAL_t, ndim=2] B):
+    cdef np.ndarray[REAL_t, ndim=2] C = np.zeros((A.shape[0], A.shape[1]), dtype=REAL)
+    _add2(&C[0, 0], &A[0, 0], &B[0, 0], A.shape[0], A.shape[1])
+    return C
+
+fast_add = add2
 #end add
 
 cdef np.ndarray[REAL_t, ndim=2] _add_random(np.ndarray[REAL_t, ndim=2] A, const int isLinear):
@@ -135,6 +156,8 @@ def add_random(A, isLinear):
         return _add_random(A, 1)
     else:
         return _add_random(A, 0)
+
+fast_add_random = add_random
 #end add_random
 
 cdef np.ndarray[REAL_t, ndim=2] _sum(np.ndarray[REAL_t, ndim=2] A):
@@ -150,6 +173,8 @@ cdef np.ndarray[REAL_t, ndim=2] _sum(np.ndarray[REAL_t, ndim=2] A):
 
 def sum(A):
     return _sum(A)
+
+fast_sum = sum
 #end sum
 
 cdef float _square_error(np.ndarray[REAL_t, ndim=2] A, np.ndarray[REAL_t, ndim=2] B):
@@ -164,7 +189,75 @@ cdef float _square_error(np.ndarray[REAL_t, ndim=2] A, np.ndarray[REAL_t, ndim=2
 
 def square_error(A, B):
     return _square_error(A, B)
+
+fast_square_error = square_error
 #end square_error
+
+cdef np.ndarray[REAL_t, ndim=2] _matrix_multi(np.ndarray[REAL_t, ndim=2] A, const float p, const int ismulti):
+    cdef:
+        int i, j
+        np.ndarray[REAL_t, ndim=2] C
+
+    C = np.zeros((A.shape[0], A.shape[1]), dtype = REAL)
+    for i in xrange(A.shape[0]):
+        for j in xrange(A.shape[1]):
+            if ismulti == 1:
+                C[i, j] = A[i, j] * p
+            else:
+                C[i, j] = A[i, j] / p
+    return C
+
+def matrix_multi(A, p, multi = True):
+    if multi:
+        return _matrix_multi(A, p, 1)
+    else:
+        return _matrix_multi(A, p, 0)
+
+fast_matrix_multi = matrix_multi
+#end matrix multi
+
+cdef np.ndarray[REAL_t, ndim=2] _matrix_plus(np.ndarray[REAL_t, ndim=2] A, np.ndarray[REAL_t, ndim=2] B, const int isadd):
+    cdef:
+        int i, j
+        np.ndarray[REAL_t, ndim=2] C
+
+    C = np.zeros((A.shape[0], A.shape[1]), dtype = REAL)
+    for i in xrange(A.shape[0]):
+        for j in xrange(A.shape[1]):
+            if isadd == 1:
+                C[i, j] = A[i, j] + B[i, j]
+            else:
+                C[i, j] = A[i, j] - B[i, j]
+    return C
+
+cdef _matrix_plus2(REAL_t *C, REAL_t *A, REAL_t *B, const unsigned int n, const unsigned int m, const unsigned int isadd):
+    cdef unsigned int i, j
+    for i in range(n):
+        for j in range(m):
+            if isadd == 1:
+                C[i * m + j] = A[i * m + j] + B[i * m + j]
+            else:
+                C[i * m + j] = A[i * m + j] - B[i * m + j]
+
+def matrix_plus(A, B, plus = True):
+    if plus:
+        return _matrix_plus(A, B, 1)
+    else:
+        return _matrix_plus(A, B, 0)
+
+def matrix_plus2(np.ndarray[REAL_t, ndim=2] A, np.ndarray[REAL_t, ndim=2] B, plus = True):
+    cdef np.ndarray[REAL_t, ndim=2] C = np.zeros((A.shape[0], A.shape[1]), dtype=REAL)
+    _matrix_plus2(&C[0, 0], &A[0, 0], &B[0, 0], A.shape[0], A.shape[1], plus and 1 or 0)
+    return C
+
+def matrix_plus3(A, B, plus = True):
+    if plus:
+        return A + B
+    else:
+        return A - B
+
+fast_matrix_plus = matrix_plus3
+#end matrix_plus
 
 cdef _cworker(np.ndarray[REAL_t, ndim=2] data, \
     np.ndarray[REAL_t, ndim=2] weights, np.ndarray[REAL_t, ndim=2] hidden_bias, np.ndarray[REAL_t, ndim=2] visible_bias, \
@@ -180,25 +273,25 @@ cdef _cworker(np.ndarray[REAL_t, ndim=2] data, \
         np.ndarray[REAL_t, ndim=2] neg_visible_probs
         np.ndarray[REAL_t, ndim=2] neg_hidden_activations
         np.ndarray[REAL_t, ndim=2] negprods
-    pos_hidden_activations = _add(_dot(data, weights), hidden_bias)
-    pos_hidden_probs = (isLinear == 1 and pos_hidden_activations or _sigmoid2(pos_hidden_activations))
+    pos_hidden_activations = fast_add(_dot(data, weights), hidden_bias)
+    pos_hidden_probs = (isLinear == 1 and pos_hidden_activations or sigmoid_2(pos_hidden_activations))
     pos_hidden_states = _add_random(pos_hidden_probs, isLinear)
     posprods = _dot(data.T, pos_hidden_probs)
 
-    neg_visible_probs = _sigmoid2(_add(fast_dot(pos_hidden_states, weights.T), visible_bias))
-    neg_hidden_activations = _add(fast_dot(neg_visible_probs, weights), hidden_bias)
-    neg_hidden_probs = (isLinear == 1 and neg_hidden_activations or _sigmoid2(neg_hidden_activations))
+    neg_visible_probs = sigmoid_2(fast_add(fast_dot(pos_hidden_states, weights.T), visible_bias))
+    neg_hidden_activations = fast_add(fast_dot(neg_visible_probs, weights), hidden_bias)
+    neg_hidden_probs = (isLinear == 1 and neg_hidden_activations or sigmoid_2(neg_hidden_activations))
     negprods = _dot(neg_visible_probs.T, neg_hidden_probs)
 
-    add_grad_weight = weight_rate * ((posprods - negprods) / len(data) - weightcost * weights)
-    add_grad_vbias = vbias_rate * (_sum(data) - _sum(neg_visible_probs)) / len(data)
-    add_grad_hbias = hbias_rate * (_sum(pos_hidden_probs) - _sum(neg_hidden_probs)) / len(data)
+    add_grad_weight = weight_rate * (_matrix_multi(posprods - negprods, len(data), 1) - _matrix_multi(weights, weightcost, 1))
+    add_grad_vbias = _matrix_multi(_sum(data) - _sum(neg_visible_probs), vbias_rate / len(data), 1) 
+    add_grad_hbias = _matrix_multi(_sum(pos_hidden_probs) - _sum(neg_hidden_probs), hbias_rate / len(data), 1)
 
     error = _square_error(data, neg_visible_probs)
 
     return error, add_grad_weight, add_grad_vbias, add_grad_hbias, neg_hidden_probs
 
-def cworker3(data, \
+def cworker2(data, \
     weights, hidden_bias, visible_bias, \
     weight_rate, vbias_rate, hbias_rate, weightcost, \
     isLinear, batch_num):
@@ -213,74 +306,37 @@ def cworker3(data, \
         print 'finish batch compute', batch_num, time.asctime( time.localtime(time.time()) )
     return (error, add_grad_weight, add_grad_vbias, add_grad_hbias, neg_hidden_probs)
 
-def cworker2(data, \
-    weights, hidden_bias, visible_bias, \
-    weight_rate, vbias_rate, hbias_rate, weightcost, \
-    isLinear, batch_num):
-    pos_hidden_activations = add(fast_dot(data, weights), hidden_bias)
-    pos_hidden_probs = isLinear and pos_hidden_activations or fast_sigmoid(pos_hidden_activations)
-    pos_hidden_states = add_random(pos_hidden_probs, isLinear)
-    posprods = fast_dot(data.T, pos_hidden_probs)
-    pos_hidden_act = sum(pos_hidden_probs)
-    pos_visible_act = sum(data)
-
-    neg_visible_activations = add(fast_dot(pos_hidden_states, weights.T), visible_bias)
-    neg_visible_probs = fast_sigmoid(neg_visible_activations)
-    neg_hidden_activations = add(fast_dot(neg_visible_probs, weights), hidden_bias)
-    if isLinear:
-        neg_hidden_probs = neg_hidden_activations
-    else:
-        neg_hidden_probs = fast_sigmoid(neg_hidden_activations)
-    negprods = fast_dot(neg_visible_probs.T, neg_hidden_probs)
-    neg_hidden_act = sum(neg_hidden_probs)
-    neg_visible_act = sum(neg_visible_probs)
-
-    add_grad_weight = weight_rate * ((posprods - negprods) / len(data) - weightcost * weights)
-    add_grad_vbias = vbias_rate * (pos_visible_act - neg_visible_act) / len(data)
-    add_grad_hbias = hbias_rate * (pos_hidden_act - neg_hidden_act) / len(data)
-
-    error = square_error(data, neg_visible_probs)
-
-    if batch_num % 10 == 0:
-        print 'finish batch compute', batch_num, time.asctime( time.localtime(time.time()) )
-
-    return (error, add_grad_weight, add_grad_vbias, add_grad_hbias, neg_hidden_probs)
-
 def cworker1(data, \
     weights, hidden_bias, visible_bias, \
     weight_rate, vbias_rate, hbias_rate, weightcost, \
     isLinear, batch_num):
-    pos_hidden_activations = fast_dot(data, weights) + hidden_bias
-    if isLinear:
-        pos_hidden_probs = pos_hidden_activations
-        pos_hidden_states = pos_hidden_probs + np.random.randn(len(data), len(hidden_bias)).astype(REAL)
-    else:
-        pos_hidden_probs = fast_sigmoid(pos_hidden_activations)
-        pos_hidden_states = pos_hidden_probs > np.random.randn(len(data), len(hidden_bias)).astype(REAL)
+    pos_hidden_activations = fast_add(fast_dot(data, weights), hidden_bias)
+    pos_hidden_probs = isLinear and pos_hidden_activations or fast_sigmoid(pos_hidden_activations)
+    pos_hidden_states = fast_add_random(pos_hidden_probs, isLinear)
     posprods = fast_dot(data.T, pos_hidden_probs)
-    pos_hidden_act = np.sum(pos_hidden_probs, axis = 0)
-    pos_visible_act = np.sum(data, axis = 0)
+    pos_hidden_act = fast_sum(pos_hidden_probs)
+    pos_visible_act = fast_sum(data)
 
-    neg_visible_activations = fast_dot(pos_hidden_states, weights.T) + visible_bias
+    neg_visible_activations = fast_add(fast_dot(pos_hidden_states, weights.T), visible_bias)
     neg_visible_probs = fast_sigmoid(neg_visible_activations)
-    neg_hidden_activations = fast_dot(neg_visible_probs, weights) + hidden_bias
+    neg_hidden_activations = fast_add(fast_dot(neg_visible_probs, weights), hidden_bias)
     if isLinear:
         neg_hidden_probs = neg_hidden_activations
     else:
         neg_hidden_probs = fast_sigmoid(neg_hidden_activations)
     negprods = fast_dot(neg_visible_probs.T, neg_hidden_probs)
-    neg_hidden_act = np.sum(neg_hidden_probs, axis = 0)
-    neg_visible_act = np.sum(neg_visible_probs, axis = 0)
+    neg_hidden_act = fast_sum(neg_hidden_probs)
+    neg_visible_act = fast_sum(neg_visible_probs)
 
-    add_grad_weight = weight_rate * ((posprods - negprods) / len(data) - weightcost * weights)
-    add_grad_vbias = vbias_rate * (pos_visible_act - neg_visible_act) / len(data)
-    add_grad_hbias = hbias_rate * (pos_hidden_act - neg_hidden_act) / len(data)
+    add_grad_weight = fast_matrix_multi(fast_matrix_multi(fast_matrix_plus(posprods, negprods, False), len(data), False) - fast_matrix_multi(weights, weightcost), weight_rate)
+    add_grad_vbias = fast_matrix_multi(fast_matrix_plus(pos_visible_act, neg_visible_act, False), vbias_rate / len(data))
+    add_grad_hbias = fast_matrix_multi(fast_matrix_plus(pos_hidden_act, neg_hidden_act, False), hbias_rate / len(data))
 
-    error = np.sum((data - neg_visible_probs) ** 2)
+    error = fast_square_error(data, neg_visible_probs)
 
     if batch_num % 10 == 0:
         print 'finish batch compute', batch_num, time.asctime( time.localtime(time.time()) )
 
     return (error, add_grad_weight, add_grad_vbias, add_grad_hbias, neg_hidden_probs)
 
-fast_worker = cworker3
+fast_worker = cworker1
