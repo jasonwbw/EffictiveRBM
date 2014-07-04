@@ -25,7 +25,7 @@ def sigmoid_1():
     return worker_inner.sigmoid_2(a)
 
 def sigmoid_2():
-    return worker_inner.sigmoid_3(a)
+    return expit(a)
 
 def benchmark_sigmoid():
     t = timeit.Timer("sigmoid_2()", "from __main__ import sigmoid_2")
@@ -103,6 +103,34 @@ def benchmark_square_error():
     t2 = t.timeit(number=loops)
     print 'square_error_1 is %f times faster than square_error_2' % (t1 / t2)
     assert np.linalg.norm(square_error_1()-square_error_2()) == 0
+
+def matrix_multi_1():
+    return worker_inner.matrix_multi(A, 3, False)
+
+def matrix_multi_2():
+    return A / 3
+
+def benchmark_matrix_multi():
+    t = timeit.Timer("matrix_multi_2()", "from __main__ import matrix_multi_2")
+    t1 = t.timeit(number=loops)
+    t = timeit.Timer("matrix_multi_1()", "from __main__ import matrix_multi_1")
+    t2 = t.timeit(number=loops)
+    print 'matrix_multi_1 is %f times faster than matrix_multi_2' % (t1 / t2)
+    assert np.linalg.norm(matrix_multi_1()-matrix_multi_2()) == 0
+
+def matrix_plus_1():
+    return worker_inner.matrix_plus2(A, A, False)
+
+def matrix_plus_2():
+    return A - A
+
+def benchmark_matrix_plus():
+    t = timeit.Timer("matrix_plus_2()", "from __main__ import matrix_plus_2")
+    t1 = t.timeit(number=loops)
+    t = timeit.Timer("matrix_plus_1()", "from __main__ import matrix_plus_1")
+    t2 = t.timeit(number=loops)
+    print 'matrix_plus_1 is %f times faster than matrix_plus_2' % (t1 / t2)
+    assert np.linalg.norm(matrix_plus_1()-matrix_plus_2()) == 0
 
 if __name__ == '__main__':
     import benchmarks as b
