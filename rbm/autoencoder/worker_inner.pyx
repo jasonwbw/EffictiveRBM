@@ -156,6 +156,8 @@ def add_random(A, isLinear):
         return _add_random(A, 1)
     else:
         return _add_random(A, 0)
+
+fast_add_random = add_random
 #end add_random
 
 cdef np.ndarray[REAL_t, ndim=2] _sum(np.ndarray[REAL_t, ndim=2] A):
@@ -171,6 +173,8 @@ cdef np.ndarray[REAL_t, ndim=2] _sum(np.ndarray[REAL_t, ndim=2] A):
 
 def sum(A):
     return _sum(A)
+
+fast_sum = sum
 #end sum
 
 cdef float _square_error(np.ndarray[REAL_t, ndim=2] A, np.ndarray[REAL_t, ndim=2] B):
@@ -185,6 +189,8 @@ cdef float _square_error(np.ndarray[REAL_t, ndim=2] A, np.ndarray[REAL_t, ndim=2
 
 def square_error(A, B):
     return _square_error(A, B)
+
+fast_square_error = square_error
 #end square_error
 
 cdef _cworker(np.ndarray[REAL_t, ndim=2] data, \
@@ -240,10 +246,10 @@ def cworker2(data, \
     isLinear, batch_num):
     pos_hidden_activations = fast_add(fast_dot(data, weights), hidden_bias)
     pos_hidden_probs = isLinear and pos_hidden_activations or fast_sigmoid(pos_hidden_activations)
-    pos_hidden_states = add_random(pos_hidden_probs, isLinear)
+    pos_hidden_states = fast_add_random(pos_hidden_probs, isLinear)
     posprods = fast_dot(data.T, pos_hidden_probs)
-    pos_hidden_act = sum(pos_hidden_probs)
-    pos_visible_act = sum(data)
+    pos_hidden_act = fast_sum(pos_hidden_probs)
+    pos_visible_act = fast_sum(data)
 
     neg_visible_activations = fast_add(fast_dot(pos_hidden_states, weights.T), visible_bias)
     neg_visible_probs = fast_sigmoid(neg_visible_activations)
@@ -253,14 +259,14 @@ def cworker2(data, \
     else:
         neg_hidden_probs = fast_sigmoid(neg_hidden_activations)
     negprods = fast_dot(neg_visible_probs.T, neg_hidden_probs)
-    neg_hidden_act = sum(neg_hidden_probs)
-    neg_visible_act = sum(neg_visible_probs)
+    neg_hidden_act = fast_sum(neg_hidden_probs)
+    neg_visible_act = fast_sum(neg_visible_probs)
 
     add_grad_weight = weight_rate * ((posprods - negprods) / len(data) - weightcost * weights)
     add_grad_vbias = vbias_rate * (pos_visible_act - neg_visible_act) / len(data)
     add_grad_hbias = hbias_rate * (pos_hidden_act - neg_hidden_act) / len(data)
 
-    error = square_error(data, neg_visible_probs)
+    error = fast_square_error(data, neg_visible_probs)
 
     if batch_num % 10 == 0:
         print 'finish batch compute', batch_num, time.asctime( time.localtime(time.time()) )
