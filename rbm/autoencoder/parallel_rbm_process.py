@@ -76,7 +76,7 @@ except ImportError:
 		add_grad_hbias = hbias_rate * (pos_hidden_act - neg_hidden_act) / len(data)
 		error = sum((data - neg_visible_probs) ** 2)
 		if batch_num % 10 == 0:
-			print 'finish batch compute', batch_num, time.asctime(time.localtime(time.time()))
+			print 'finish batch compute', batch_num, time.asctime(time.localtime(time.time())), '. Added error', error
 		return (error, add_grad_weight, add_grad_vbias, add_grad_hbias, neg_hidden_probs)
 
 class ParallelRBM(object):
@@ -122,7 +122,7 @@ class ParallelRBM(object):
 		max_epochs = 50, batch = 10, \
 		initialmomentum = 0.5, finalmomentum = 0.9, \
 		weight_rate = 0.001, vbias_rate = 0.001, hbias_rate = 0.001, \
-		weightcost = 0.0002):
+		weightcost = 0.0002, rate_m=1.0):
 		'''
 		Train the rbm model for the data and given learning params
 
@@ -156,6 +156,9 @@ class ParallelRBM(object):
 			rel1 = pool.imap_unordered(worker, [(batch_iter.next(), self.weights, self.hidden_bias, self.visible_bias,\
 				weight_rate, vbias_rate, hbias_rate, weightcost, self.isLinear, b) for b in xrange(min(2 * self.workers, batch))])
 			for b in xrange(self.workers):
+				weight_rate *= rate_m
+				hbias_rate *= rate_m
+				vbias_rate *= rate_m
 				self.update(rel1.next(), epoch, momentum)
 			for turn in xrange(batch / self.workers - 1):
 				if turn != batch / self.workers - 2:
@@ -167,8 +170,14 @@ class ParallelRBM(object):
 						rel1 = rel_tmp
 				for b in xrange(self.workers):
 					if turn % 2 == 0:
+						weight_rate *= rate_m
+						hbias_rate *= rate_m
+						vbias_rate *= rate_m
 						self.update(rel1.next(), epoch, momentum)
 					else:
+						weight_rate *= rate_m
+						hbias_rate *= rate_m
+						vbias_rate *= rate_m
 						self.update(rel2.next(), epoch, momentum)
 			batch_iter.back2start()
 			print "epoch %d, error %d\n" % (epoch, self.error)
