@@ -13,6 +13,7 @@ References :
 
 import time
 import multiprocessing as mp
+import joblib
 from copy import deepcopy
 from numpy import random, dot, sum, array, exp, zeros, concatenate, float32 as REAL
 from scipy.special import expit
@@ -76,7 +77,7 @@ except ImportError:
 		add_grad_hbias = hbias_rate * (pos_hidden_act - neg_hidden_act) / len(data)
 		error = sum((data - neg_visible_probs) ** 2)
 		if batch_num % 10 == 0:
-			print 'finish batch compute', batch_num, time.asctime(time.localtime(time.time()))
+			print 'finish batch compute', batch_num, time.asctime(time.localtime(time.time())), '. Added error', error
 		return (error, add_grad_weight, add_grad_vbias, add_grad_hbias, neg_hidden_probs)
 
 class ParallelRBM(object):
@@ -96,7 +97,7 @@ class ParallelRBM(object):
 	    _grad_vbias : tmp gradient for visible bias
 	'''
 
-	def __init__(self, num_visible, num_hidden, workers, isLinear = False):
+	def __init__(self, num_visible, num_hidden, workers, model_folder = './model', isLinear = False):
 		'''
 		Init attributes by given params
 
@@ -117,12 +118,14 @@ class ParallelRBM(object):
 		self.hidden_probs = None
 		self.workers = workers
 		self.isLinear = isLinear
+		self.model_folder = model_folder
+		self.last_epoch = -1
 
 	def train(self, batch_iter, \
 		max_epochs = 50, batch = 10, \
 		initialmomentum = 0.5, finalmomentum = 0.9, \
 		weight_rate = 0.001, vbias_rate = 0.001, hbias_rate = 0.001, \
-		weightcost = 0.0002):
+		weightcost = 0.0002, rate_m=1.0):
 		'''
 		Train the rbm model for the data and given learning params
 
@@ -156,6 +159,9 @@ class ParallelRBM(object):
 			rel1 = pool.imap_unordered(worker, [(batch_iter.next(), self.weights, self.hidden_bias, self.visible_bias,\
 				weight_rate, vbias_rate, hbias_rate, weightcost, self.isLinear, b) for b in xrange(min(2 * self.workers, batch))])
 			for b in xrange(self.workers):
+				weight_rate *= rate_m
+				hbias_rate *= rate_m
+				vbias_rate *= rate_m
 				self.update(rel1.next(), epoch, momentum)
 			for turn in xrange(batch / self.workers - 1):
 				if turn != batch / self.workers - 2:
@@ -167,11 +173,18 @@ class ParallelRBM(object):
 						rel1 = rel_tmp
 				for b in xrange(self.workers):
 					if turn % 2 == 0:
+						weight_rate *= rate_m
+						hbias_rate *= rate_m
+						vbias_rate *= rate_m
 						self.update(rel1.next(), epoch, momentum)
 					else:
+						weight_rate *= rate_m
+						hbias_rate *= rate_m
+						vbias_rate *= rate_m
 						self.update(rel2.next(), epoch, momentum)
 			batch_iter.back2start()
 			print "epoch %d, error %d\n" % (epoch, self.error)
+			self.save(epoch = epoch)
 
 	def update(self, (error, add_grad_weight, add_grad_vbias, add_grad_hbias, neg_hidden_probs), epoch, momentum):
 		'''
@@ -186,11 +199,11 @@ class ParallelRBM(object):
 		'''
 		self.error += error
 		
-		if epoch == self.max_epochs - 1:
-			if self.hidden_probs == None or len(self.hidden_probs) == 0:
-				self.hidden_probs = neg_hidden_probs
-			else:
-				concatenate((self.hidden_probs, neg_hidden_probs), axis=0)
+		if self.hidden_probs == None or len(self.hidden_probs) == 0 or epoch != self.last_epoch:
+			self.last_epoch = epoch
+			self.hidden_probs = neg_hidden_probs
+		else:
+			concatenate((self.hidden_probs, neg_hidden_probs), axis=0)
 		
 		self._grad_weight = momentum * self._grad_weight + add_grad_weight
 		self._grad_vbias = momentum * self._grad_vbias + add_grad_vbias
@@ -199,4 +212,14 @@ class ParallelRBM(object):
 		self.weights += self._grad_weight
 		self.visible_bias += self._grad_vbias
 		self.hidden_bias += self._grad_hbias
+
+	def save(self, epoch = None):
+		if epoch == None:
+			joblib.dump(self, self.model_folder)
+		else:
+			joblib.dump(self, self.model_folder + '/' + str(epoch))
+
+	@classmethod
+	def load(cls, model_folder):
+		return joblib.load(model_folder)
 #endclass ParallelRBM
