@@ -13,6 +13,7 @@ References :
 
 import time
 import multiprocessing as mp
+import joblib
 from copy import deepcopy
 from numpy import random, dot, sum, array, exp, zeros, concatenate, float32 as REAL
 from scipy.special import expit
@@ -96,7 +97,7 @@ class ParallelRBM(object):
 	    _grad_vbias : tmp gradient for visible bias
 	'''
 
-	def __init__(self, num_visible, num_hidden, workers, isLinear = False):
+	def __init__(self, num_visible, num_hidden, workers, model_folder = './model', isLinear = False):
 		'''
 		Init attributes by given params
 
@@ -117,6 +118,7 @@ class ParallelRBM(object):
 		self.hidden_probs = None
 		self.workers = workers
 		self.isLinear = isLinear
+		self.model_folder = model_folder
 
 	def train(self, batch_iter, \
 		max_epochs = 50, batch = 10, \
@@ -181,6 +183,7 @@ class ParallelRBM(object):
 						self.update(rel2.next(), epoch, momentum)
 			batch_iter.back2start()
 			print "epoch %d, error %d\n" % (epoch, self.error)
+			self.save(epoch = epoch)
 
 	def update(self, (error, add_grad_weight, add_grad_vbias, add_grad_hbias, neg_hidden_probs), epoch, momentum):
 		'''
@@ -208,4 +211,14 @@ class ParallelRBM(object):
 		self.weights += self._grad_weight
 		self.visible_bias += self._grad_vbias
 		self.hidden_bias += self._grad_hbias
+
+	def save(self, epoch = None):
+		if epoch == None:
+			joblib.dump(self, self.model_folder)
+		else:
+			joblib.dump(self, self.model_folder + '/' + str(epoch))
+
+    @classmethod
+    def load(cls, model_folder):
+        return joblib.load(model_folder)
 #endclass ParallelRBM
