@@ -119,6 +119,7 @@ class ParallelRBM(object):
 		self.workers = workers
 		self.isLinear = isLinear
 		self.model_folder = model_folder
+		self.last_epoch = -1
 
 	def train(self, batch_iter, \
 		max_epochs = 50, batch = 10, \
@@ -198,11 +199,11 @@ class ParallelRBM(object):
 		'''
 		self.error += error
 		
-		if epoch == self.max_epochs - 1:
-			if self.hidden_probs == None or len(self.hidden_probs) == 0:
-				self.hidden_probs = neg_hidden_probs
-			else:
-				concatenate((self.hidden_probs, neg_hidden_probs), axis=0)
+		if self.hidden_probs == None or len(self.hidden_probs) == 0 or epoch != self.last_epoch:
+			self.last_epoch = epoch
+			self.hidden_probs = neg_hidden_probs
+		else:
+			concatenate((self.hidden_probs, neg_hidden_probs), axis=0)
 		
 		self._grad_weight = momentum * self._grad_weight + add_grad_weight
 		self._grad_vbias = momentum * self._grad_vbias + add_grad_vbias
@@ -218,7 +219,7 @@ class ParallelRBM(object):
 		else:
 			joblib.dump(self, self.model_folder + '/' + str(epoch))
 
-    @classmethod
-    def load(cls, model_folder):
-        return joblib.load(model_folder)
+	@classmethod
+	def load(cls, model_folder):
+		return joblib.load(model_folder)
 #endclass ParallelRBM
