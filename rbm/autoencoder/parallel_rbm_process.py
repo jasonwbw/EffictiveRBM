@@ -213,11 +213,18 @@ class ParallelRBM(object):
 		self.visible_bias += self._grad_vbias
 		self.hidden_bias += self._grad_hbias
 
+	def dimension_reduction(self, x):
+		pos_hidden_activations = dot(x, self.weights) + self.hidden_bias
+		if self.isLinear:
+			return pos_hidden_activations
+		else:
+			return expit(pos_hidden_activations)
+
 	def save(self, epoch = None):
 		if epoch == None:
-			joblib.dump(self, self.model_folder)
+			joblib.dump(self, self.model_folder) + '/model.pkl'
 		else:
-			joblib.dump(self, self.model_folder + '/' + str(epoch))
+			joblib.dump(self, self.model_folder + '/' + str(epoch) + '/model.pkl')
 
 	@classmethod
 	def load(cls, model_folder):
