@@ -222,7 +222,7 @@ class ParallelRBM(object):
 
 	def save(self, epoch = None):
 		if epoch == None:
-			joblib.dump(self, self.model_folder) + '/model.pkl'
+			joblib.dump(self, self.model_folder + '/model.pkl')
 		else:
 			joblib.dump(self, self.model_folder + '/' + str(epoch) + '/model.pkl')
 
