@@ -125,7 +125,7 @@ class ParallelRBM(object):
 		max_epochs = 50, batch = 10, \
 		initialmomentum = 0.5, finalmomentum = 0.9, \
 		weight_rate = 0.001, vbias_rate = 0.001, hbias_rate = 0.001, \
-		weightcost = 0.0002, rate_m=1.0):
+		weightcost = 0.0002, rate_m=1.0, epoch_rate_m=0.998, rate_min = 0.0001):
 		'''
 		Train the rbm model for the data and given learning params
 
@@ -159,9 +159,7 @@ class ParallelRBM(object):
 			rel1 = pool.imap_unordered(worker, [(batch_iter.next(), self.weights, self.hidden_bias, self.visible_bias,\
 				weight_rate, vbias_rate, hbias_rate, weightcost, self.isLinear, b) for b in xrange(min(2 * self.workers, batch))])
 			for b in xrange(self.workers):
-				weight_rate *= rate_m
-				hbias_rate *= rate_m
-				vbias_rate *= rate_m
+				weight_rate, hbias_rate, vbias_rate = self.update_learning_rate(weight_rate, hbias_rate, vbias_rate, rate_m, rate_min)
 				self.update(rel1.next(), epoch, momentum)
 			for turn in xrange(batch / self.workers - 1):
 				if turn != batch / self.workers - 2:
@@ -172,19 +170,38 @@ class ParallelRBM(object):
 					else:
 						rel1 = rel_tmp
 				for b in xrange(self.workers):
+					weight_rate, hbias_rate, vbias_rate = self.update_learning_rate(weight_rate, hbias_rate, vbias_rate, rate_m, rate_min)
 					if turn % 2 == 0:
-						weight_rate *= rate_m
-						hbias_rate *= rate_m
-						vbias_rate *= rate_m
 						self.update(rel1.next(), epoch, momentum)
 					else:
-						weight_rate *= rate_m
-						hbias_rate *= rate_m
-						vbias_rate *= rate_m
 						self.update(rel2.next(), epoch, momentum)
 			batch_iter.back2start()
 			print "epoch %d, error %d\n" % (epoch, self.error)
+			weight_rate, hbias_rate, vbias_rate = self.update_learning_rate(weight_rate, hbias_rate, vbias_rate, epoch_rate_m, rate_min)
 			self.save(epoch = epoch)
+
+	def update_learning_rate(self, weight_rate, hbias_rate, vbias_rate, rate_m, rate_min):
+		'''
+		Update learning rate
+
+		Args:
+		    weight_rate : learning rate for weights
+		    hbias_rate : learning rate for hidden bias
+		    vbias_rate : learning rate for visible bias
+		    rate_m : rate decay
+		    rate_min : min rate for the three learning rate
+
+		Returns:
+		    new weight_rate. hbias_rate, vbias_rate
+		'''
+		if rate_m == 1: return weight_rate, hbias_rate, vbias_rate
+		if weight_rate * rate_m > rate_min:
+			weight_rate *= rate_m
+		if hbias_rate * rate_m > rate_min:
+			hbias_rate *= rate_m
+		if vbias_rate * rate_m > rate_min:
+			vbias_rate *= rate_m
+		return weight_rate, hbias_rate, vbias_rate
 
 	def update(self, (error, add_grad_weight, add_grad_vbias, add_grad_hbias, neg_hidden_probs), epoch, momentum):
 		'''
