@@ -58,17 +58,15 @@ class FileBatchIterator(BatchIterator):
 		self.filename = filename
 		self.file_length = self._file_length(filename)
 		self._f = open(filename, 'r')
-		if self.file_length % batch == 0:
-			self.one_batch_line = self.file_length / batch
-		else:
-			self.one_batch_line = self.file_length / batch + 1
+		self.one_batch_line = self.file_length / batch
 
 	def next_batch(self):
 		if self.current_batch >= self.batch - 1:
 			return None
 		self.current_batch += 1
 		data = []
-		for i in xrange(min(self.one_batch_line, self.file_length - self.current_batch * self.one_batch_line)):
+		max_range = self.one_batch_line if self.current_batch >= self.file_length % self.batch else self.one_batch_line + 1
+		for i in xrange(max_range):
 			data.append(self._f.readline().strip())
 		return np.array(data)
 
